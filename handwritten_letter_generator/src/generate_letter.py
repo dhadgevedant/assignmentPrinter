@@ -8,9 +8,9 @@ import math
 # Page and Text Layout Settings
 # ---------------------------
 A4_WIDTH, A4_HEIGHT = 2480, 3508  # A4 page at 300 dpi
-START_X = 400.0    # Horizontal margin (can be a decimal)
-START_Y = 426    # Vertical position of the first line (can be a decimal)
-LINE_HEIGHT = 90 # Spacing between lines (can be a decimal)
+START_X = 267.0    # Horizontal margin (can be a decimal)
+START_Y = 460.629    # Vertical position of the first line (can be a decimal)
+LINE_HEIGHT = 96.26 # Spacing between lines (can be a decimal)
 RIGHT_MARGIN = 600  # Right margin (for wrapping)
 RIGHT_PADDING = 200  # Additional padding on the right side
 
@@ -45,7 +45,7 @@ TEXT_COLOR = (55, 45, 146)  # Base blue color
 BRIGHTNESS_VARIATION = 0.01   # ±10% lightness variation
 
 # Option to show or hide the background:
-SHOW_BACKGROUND = True   # Set to False to generate output without the background
+SHOW_BACKGROUND = False   # Set to False to generate output without the background
 
 # ---------------------------
 # Ink Brightness Variation Function
