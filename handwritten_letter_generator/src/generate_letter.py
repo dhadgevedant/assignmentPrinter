@@ -174,7 +174,8 @@ if __name__ == "__main__":
     project_root = os.path.abspath(os.path.join(script_dir, os.pardir, os.pardir))
 
     letter_txt = os.path.join(script_dir, "letter.txt")
-    font_ttf = os.path.join(script_dir, "..", "fonts", "font3.ttf")
+    #edit the name of your font file here
+    font_ttf = os.path.join(script_dir, "..", "fonts", "font.ttf")
     font_ttf = os.path.abspath(font_ttf)
 
     bg_img = os.path.join(project_root, "assets", "lined_a4.png")
