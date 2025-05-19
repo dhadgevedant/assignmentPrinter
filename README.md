@@ -16,8 +16,11 @@ The variation is necessary, but choosing the right handwritten font is what will
 - Customizable font and background (lined paper or blank)
 - High-resolution output suitable for printing (300 DPI A4)
 
-## Requirements
+## Get Started
 
-- Python 3.7+
-- [Pillow](https://python-pillow.org/) (`PIL`)
+- Install required libraries
+- Download font files from [dafont.com]([url](https://www.dafont.com/biro-script.font))
+- Paste the downloaded fonts in the fonts folder
+- Rename the font file inside src code
+- Go print some assignments!!
 
