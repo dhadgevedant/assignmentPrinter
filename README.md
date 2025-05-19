@@ -19,7 +19,7 @@ The variation is necessary, but choosing the right handwritten font is what will
 ## Get Started
 
 - Install required libraries
-- Download font files from [dafont.com]([url](https://www.dafont.com/biro-script.font))
+- Download font files from [dafont.com]([(https://www.dafont.com/biro-script.font)])
 - Paste the downloaded fonts in the fonts folder
 - Rename the font file inside src code
 - Go print some assignments!!
