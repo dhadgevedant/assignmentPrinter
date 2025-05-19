@@ -8,22 +8,22 @@ import math
 # Page and Text Layout Settings
 # ---------------------------
 A4_WIDTH, A4_HEIGHT = 2480, 3508  # A4 page at 300 dpi
-START_X = 267.0    # Horizontal margin (can be a decimal)
-START_Y = 460.629    # Vertical position of the first line (can be a decimal)
+START_X = 297.637795  # Horizontal margin (can be a decimal)
+START_Y = 383.858267   # Vertical position of the first line (can be a decimal)
 LINE_HEIGHT = 96.26 # Spacing between lines (can be a decimal)
 RIGHT_MARGIN = 600  # Right margin (for wrapping)
 RIGHT_PADDING = 200  # Additional padding on the right side
 
 # ---------------------------
-# Randomization Parameters (Tweak these as needed)
+# Randomization Parameters
 # ---------------------------
-LETTER_VERTICAL_JITTER_MIN = 0
-LETTER_VERTICAL_JITTER_MAX = 0
-LETTER_HORIZONTAL_JITTER_MIN = -1
-LETTER_HORIZONTAL_JITTER_MAX = 3
+LETTER_VERTICAL_JITTER_MIN = -1.2
+LETTER_VERTICAL_JITTER_MAX = 1.2
+LETTER_HORIZONTAL_JITTER_MIN = -0
+LETTER_HORIZONTAL_JITTER_MAX = 0
 
 LETTER_TILT_MIN = 0    # Minimal tilt
-LETTER_TILT_MAX = -20  # Maximum tilt (negative means tilt in one direction)
+LETTER_TILT_MAX = 10 # Maximum tilt (negative means tilt in one direction)
 
 LETTER_SPACING_VARIATION_MIN = 4
 LETTER_SPACING_VARIATION_MAX = 15
@@ -31,9 +31,13 @@ LETTER_SPACING_VARIATION_MAX = 15
 # Additional padding (in pixels) to avoid clipping when rotating
 LETTER_PADDING = 10
 
-# New parameter for pressure variation (scaling factor)
+# Pressure variation (scaling factor)
 PRESSURE_MIN = 0.95
 PRESSURE_MAX = 1.05
+
+# Size variation (font size scaling factor)
+SIZE_VARIATION_MIN = 0.95
+SIZE_VARIATION_MAX = 1.5
 
 # Correction probability (chance to simulate a correction on a line)
 CORRECTION_PROBABILITY = 0
@@ -41,166 +45,143 @@ CORRECTION_PROBABILITY = 0
 # ---------------------------
 # Text Appearance Settings
 # ---------------------------
-TEXT_COLOR = (55, 45, 146)  # Base blue color
-BRIGHTNESS_VARIATION = 0.01   # ±10% lightness variation
+TEXT_COLOR = (55, 45, 146)  # Base ink color
+BRIGHTNESS_VARIATION = 0.01 # ±1% lightness variation
 
 # Option to show or hide the background:
-SHOW_BACKGROUND = False   # Set to False to generate output without the background
+SHOW_BACKGROUND = False
+
+# Base font size
+BASE_FONT_SIZE = 60
 
 # ---------------------------
-# Ink Brightness Variation Function
+# Ink Brightness Variation
 # ---------------------------
 def randomize_ink_brightness(base_color, variation=BRIGHTNESS_VARIATION):
-    """
-    Adjusts the brightness (lightness) of the base_color by a random amount 
-    within ±variation while preserving the hue.
-    """
-    r, g, b = base_color
-    r, g, b = r / 255.0, g / 255.0, b / 255.0
+    r, g, b = [c/255.0 for c in base_color]
     h, l, s = colorsys.rgb_to_hls(r, g, b)
     delta = random.uniform(-variation, variation)
     new_l = min(max(l + delta, 0), 1)
-    new_r, new_g, new_b = colorsys.hls_to_rgb(h, new_l, s)
-    return (int(new_r * 255), int(new_g * 255), int(new_b * 255))
+    nr, ng, nb = colorsys.hls_to_rgb(h, new_l, s)
+    return (int(nr*255), int(ng*255), int(nb*255))
 
 # ---------------------------
-# Helper Functions for Text Wrapping
+# Helper Functions
 # ---------------------------
+
 def measure_text_width(text, font):
-    """Return the pixel width of text using the given font."""
     bbox = font.getbbox(text)
     return bbox[2] - bbox[0]
 
+
 def wrap_text(text, font, max_width):
-    """
-    Wrap text so that each line's width does not exceed max_width.
-    Returns a list of lines.
-    """
-    wrapped_lines = []
-    for paragraph in text.split("\n"):
-        if not paragraph:
-            wrapped_lines.append("")  # Preserve blank lines
+    lines = []
+    for para in text.split("\n"):
+        if not para:
+            lines.append("")
             continue
-        words = paragraph.split(" ")
-        current_line = words[0]
-        for word in words[1:]:
-            test_line = current_line + " " + word
-            if measure_text_width(test_line, font) <= max_width:
-                current_line = test_line
+        words = para.split(" ")
+        line = words[0]
+        for w in words[1:]:
+            test = f"{line} {w}"
+            if measure_text_width(test, font) <= max_width:
+                line = test
             else:
-                wrapped_lines.append(current_line)
-                current_line = word
-        wrapped_lines.append(current_line)
-    return wrapped_lines
+                lines.append(line)
+                line = w
+        lines.append(line)
+    return lines
 
 # ---------------------------
-# Multi-Page Generation Function
+# Generation Function
 # ---------------------------
 def generate_handwritten_letter(text, output_dir, font_path, bg_path, show_background=True):
-    # Load the font
-    font = ImageFont.truetype(font_path, 48)
-    
-    # Calculate available width for text (accounting for right margin and additional padding)
+    # Verify font file exists
+    if not os.path.isfile(font_path):
+        raise FileNotFoundError(f"Font not found at: {font_path}")
+
+    # Prepare base font for wrapping
+    base_font = ImageFont.truetype(font_path, BASE_FONT_SIZE)
     available_width = int(A4_WIDTH - START_X - RIGHT_MARGIN - RIGHT_PADDING)
-    # Wrap the input text based on available width
-    wrapped_lines = wrap_text(text, font, available_width)
-    
-    # Calculate maximum lines per page (convert float division result to int)
-    max_lines_per_page = int((A4_HEIGHT - START_Y) // LINE_HEIGHT)
-    # Split wrapped lines into pages
-    pages = [wrapped_lines[i:i + max_lines_per_page] for i in range(0, len(wrapped_lines), max_lines_per_page)]
-    
-    for page_idx, page in enumerate(pages, start=1):
-        # Create a new page: either load the background or create a blank white page.
-        if show_background:
-            image = Image.open(bg_path)
-            image = image.resize((A4_WIDTH, A4_HEIGHT))
-        else:
-            image = Image.new('RGB', (A4_WIDTH, A4_HEIGHT), "white")
-        # Ensure image is in RGBA mode for transparency
-        image = image.convert("RGBA")
-        
-        # Draw each line on this page
-        draw = ImageDraw.Draw(image)
-        for line_idx, line in enumerate(page):
-            y = START_Y + line_idx * LINE_HEIGHT
-            current_x = START_X
-            for char in line:
-                # Get bounding box for the character
-                left, top, right, bottom = font.getbbox(char)
-                char_width = right - left
-                char_height = bottom - top
+    wrapped = wrap_text(text, base_font, available_width)
 
-                # Create a canvas larger than the character to avoid clipping after rotation.
-                canvas_width = char_width + 2 * LETTER_PADDING
-                canvas_height = char_height + 2 * LETTER_PADDING
-                char_image = Image.new('RGBA', (canvas_width, canvas_height), (255, 255, 255, 0))
-                char_draw = ImageDraw.Draw(char_image)
-                
-                # Get a randomized ink brightness while preserving hue
-                ink_color = randomize_ink_brightness(TEXT_COLOR)
-                
-                # Draw the character with padding adjustment
-                char_draw.text((LETTER_PADDING - left, LETTER_PADDING - top), char, font=font, fill=ink_color)
-                
-                # --- Pressure Variation ---
-                pressure_factor = random.uniform(PRESSURE_MIN, PRESSURE_MAX)
-                # Scale the character image by the pressure factor
-                scaled_width = int(char_image.width * pressure_factor)
-                scaled_height = int(char_image.height * pressure_factor)
-                char_image = char_image.resize((scaled_width, scaled_height), resample=Image.BICUBIC)
-                
-                # --- End Pressure Variation ---
-                
-                # Apply random tilt
-                angle = random.uniform(LETTER_TILT_MIN, LETTER_TILT_MAX)
-                char_image = char_image.rotate(angle, resample=Image.BICUBIC, expand=True)
-                
-                # Apply horizontal jitter (vertical jitter is disabled)
-                jitter_x = random.randint(LETTER_HORIZONTAL_JITTER_MIN, LETTER_HORIZONTAL_JITTER_MAX)
-                jitter_y = 0
-                paste_x = int(round(current_x + jitter_x))
-                paste_y = int(round(y + jitter_y))
-                image.paste(char_image, (paste_x, paste_y), char_image)
-                
-                # Update current x position using the original character width scaled by pressure factor
-                spacing_variation = random.randint(LETTER_SPACING_VARIATION_MIN, LETTER_SPACING_VARIATION_MAX)
-                current_x += int(char_width * pressure_factor) + spacing_variation
-            
-            # --- Simulated Correction ---
-            # With a probability, add a strike-through correction on the line
-            # if random.random() < CORRECTION_PROBABILITY and current_x > START_X + 100:
-            #     corr_start = random.randint(int(START_X), int(current_x) - 50)
-            #     corr_length = random.randint(30, 100)
-            #     corr_y = int(round(START_Y - 10 + line_idx * LINE_HEIGHT + LINE_HEIGHT / 2))
-            #     # Draw a correction line in a semi-transparent dark red
-            #     draw.line([(corr_start, corr_y), (corr_start + corr_length, corr_y)], fill=(55, 45, 146), width=3)
-            # --- End Simulated Correction ---
-        
-        # Determine output filename based on number of pages
-        if len(pages) == 1:
-            output_file = os.path.join(output_dir, "handwritten_letter.png")
+    max_lines = int((A4_HEIGHT - START_Y) // LINE_HEIGHT)
+    pages = [wrapped[i:i+max_lines] for i in range(0, len(wrapped), max_lines)]
+
+    for idx, page in enumerate(pages, start=1):
+        # Load or create background
+        if show_background and os.path.isfile(bg_path):
+            img = Image.open(bg_path).resize((A4_WIDTH, A4_HEIGHT))
         else:
-            output_file = os.path.join(output_dir, f"handwritten_letter_page_{page_idx}.png")
-        image.save(output_file)
-        print(f"Page {page_idx} generated and saved to {output_file}")
+            img = Image.new('RGB', (A4_WIDTH, A4_HEIGHT), 'white')
+        img = img.convert('RGBA')
+        draw = ImageDraw.Draw(img)
+
+        # Draw lines
+        for li, line in enumerate(page):
+            y = START_Y + li * LINE_HEIGHT
+            x = START_X
+            for ch in line:
+                # Size variation
+                sf = random.uniform(SIZE_VARIATION_MIN, SIZE_VARIATION_MAX)
+                fs = max(1, int(BASE_FONT_SIZE * sf))
+                base_font = max(1, int(BASE_FONT_SIZE * sf))
+                fnt = ImageFont.truetype(font_path, fs)
+
+                # Measure char
+                L, T, R, B = fnt.getbbox(ch)
+                cw, chh = R-L, B-T
+
+                # Render onto char canvas
+                cw_canvas = cw + 2*LETTER_PADDING
+                ch_canvas = chh + 2*LETTER_PADDING
+                char_im = Image.new('RGBA', (cw_canvas, ch_canvas), (0,0,0,0))
+                cd = ImageDraw.Draw(char_im)
+                color = randomize_ink_brightness(TEXT_COLOR)
+                cd.text((LETTER_PADDING - L, LETTER_PADDING - T), ch, font=fnt, fill=color)
+
+                # Pressure scale
+                pf = random.uniform(PRESSURE_MIN, PRESSURE_MAX)
+                nw = int(char_im.width * pf)
+                nh = int(char_im.height * pf)
+                char_im = char_im.resize((nw, nh), Image.BICUBIC)
+
+                # Tilt
+                ang = random.uniform(LETTER_TILT_MIN, LETTER_TILT_MAX)
+                char_im = char_im.rotate(ang, Image.BICUBIC, expand=True)
+
+                # Jitter and paste
+                jx = random.randint(LETTER_HORIZONTAL_JITTER_MIN, LETTER_HORIZONTAL_JITTER_MAX)
+                img.paste(char_im, (int(round(x + jx)), int(round(y))), char_im)
+
+                # Advance x
+                var = random.randint(LETTER_SPACING_VARIATION_MIN, LETTER_SPACING_VARIATION_MAX)
+                x += int(cw * pf) + var
+
+        # Save
+        name = "handwritten_letter.png" if len(pages)==1 else f"handwritten_page_{idx}.png"
+        outf = os.path.join(output_dir, name)
+        os.makedirs(output_dir, exist_ok=True)
+        img.save(outf)
+        print(f"Saved: {outf}")
 
 # ---------------------------
-# Main Function
+# Entry Point
 # ---------------------------
-def main():
-    letter_file = os.path.join(os.path.dirname(__file__), "letter.txt")
-    with open(letter_file, "r", encoding="utf-8") as f:
-        letter_text = f.read()
-    
-    font_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "fonts", "font1.ttf")
-    bg_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "lined_a4.png")
-    
-    output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "output")
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    
-    generate_handwritten_letter(letter_text, output_dir, font_file, bg_file, show_background=SHOW_BACKGROUND)
-
 if __name__ == "__main__":
-    main()
+    # Compute project root (two levels up from this script)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(script_dir, os.pardir, os.pardir))
+
+    letter_txt = os.path.join(script_dir, "letter.txt")
+    font_ttf = os.path.join(script_dir, "..", "fonts", "font3.ttf")
+    font_ttf = os.path.abspath(font_ttf)
+
+    bg_img = os.path.join(project_root, "assets", "lined_a4.png")
+    out_dir = os.path.join(project_root, "output")
+
+    # Read input
+    with open(letter_txt, "r", encoding="utf-8") as f:
+        txt = f.read()
+
+    generate_handwritten_letter(txt, out_dir, font_ttf, bg_img, show_background=SHOW_BACKGROUND)
