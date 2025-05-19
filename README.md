@@ -4,6 +4,7 @@ This project is a Python-based tool designed to convert typed text into a handwr
 
 The variation is necessary, but choosing the right handwritten font is what will make it look more realistic. I recommend using the Brio Slop font, which has a ballpoint pen writing style.
 
+![IMG_9063](https://github.com/user-attachments/assets/83161eb2-e056-4dfe-bc87-35f0a00c3f62)
 
 ## Features
 
